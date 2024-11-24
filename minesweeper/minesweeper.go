@@ -112,7 +112,7 @@ func (g *Game) toggleFlagAt(row, col int) error {
 		return fmt.Errorf("game finished")
 	}
 	g.Positions[row][col].isFlagged = !g.Positions[row][col].isFlagged
-	g.checkWin()
+	g.Status = g.checkStatus()
 	return nil
 }
 
@@ -124,7 +124,7 @@ func (g *Game) revealAt(row, col int) (gameStatus, error) {
 	if g.Status != PLAYING {
 		return g.Status, fmt.Errorf("game finished")
 	}
-	defer g.checkWin()
+	defer func() { g.Status = g.checkStatus() }()
 	g.Positions[row][col].isRevealed = true
 	if g.Positions[row][col].isBomb || g.Positions[row][col].nearbyBombs != 0 {
 		return g.Status, nil
@@ -167,24 +167,14 @@ func (g *Game) MoveTo(dir direction) error {
 	return nil
 }
 
-func (g *Game) checkWin() {
-	stillPlaying := false
-
-	for i := range g.Positions {
-		for j := range g.Positions[i] {
-			if g.Positions[i][j].isBomb && g.Positions[i][j].isRevealed {
-				g.Status = DEFEAT
-				return
-			}
-			if g.Positions[i][j].isBomb && !g.Positions[i][j].isFlagged ||
-				!g.Positions[i][j].isBomb && !g.Positions[i][j].isRevealed {
-				stillPlaying = true
-			}
-		}
+func (f Game) Render() string {
+	switch f.Status {
+	case VICTORY:
+		return VictoryView()
+	case DEFEAT:
+		return DefeatView()
+	case PLAYING:
+		return f.gameView()
 	}
-	if stillPlaying {
-		g.Status = PLAYING
-		return
-	}
-	g.Status = VICTORY
+	return ""
 }
